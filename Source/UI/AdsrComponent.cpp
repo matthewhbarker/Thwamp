@@ -25,6 +25,7 @@
      setSliderParams(decaySlider);
      setSliderParams(sustainSlider);
      setSliderParams(releaseSlider);
+     
  }
 
  AdsrComponent::~AdsrComponent()

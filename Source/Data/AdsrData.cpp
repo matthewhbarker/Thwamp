@@ -15,7 +15,7 @@ void AdsrData::updateADSR(const float attack, const float decay, const float sus
     adsrParams.attack = attack;
     adsrParams.decay = decay;
     adsrParams.sustain = sustain;
-    adsrParams.decay = release;
+    adsrParams.release = release;
     
     setParameters(adsrParams);
 }

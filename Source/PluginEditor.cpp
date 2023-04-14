@@ -18,6 +18,7 @@ ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
     setSize (screenWidth, screenHeight);
 //    addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(adsr);
+    
 }
 
 ThwampAudioProcessorEditor::~ThwampAudioProcessorEditor()
@@ -35,11 +36,11 @@ void ThwampAudioProcessorEditor::paint (juce::Graphics& g)
 void ThwampAudioProcessorEditor::resized()
 {
     float buffer = 50.0f;
-//    float waveFormDisplayWidth = 500.0f;
-//    float waveFormDisplayHeight = 150.0f;
-//    waveformDisplay.setBounds(screenWidth/2 - waveFormDisplayWidth/2, buffer, waveFormDisplayWidth, waveFormDisplayHeight);
+    float waveFormDisplayWidth = 500.0f;
+    float waveFormDisplayHeight = 150.0f;
+    waveformDisplay.setBounds(screenWidth/2 - waveFormDisplayWidth/2, buffer, waveFormDisplayWidth, waveFormDisplayHeight);
     
     float adsrComponentWidth = 250.0f;
-    float adsrComponentHeight = 150.0f;
-    adsr.setBounds(buffer, getHeight()/2 + adsrComponentHeight, adsrComponentWidth, adsrComponentHeight);
+    float adsrComponentHeight = 100.0f;
+    adsr.setBounds(buffer, getHeight()/2 + buffer, adsrComponentWidth, adsrComponentHeight);
 }
