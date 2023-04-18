@@ -159,10 +159,21 @@ void ThwampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             auto& sustain = *apvts.getRawParameterValue("SUSTAIN");
             auto& release = *apvts.getRawParameterValue("RELEASE");
             
+            //OSC
             auto& oscWaveChoice = *apvts.getRawParameterValue("OSC1WAVETYPE");
             
+            //NOISE OSC
+            auto& noiseOscWaveChoice = *apvts.getRawParameterValue("OSC2WAVETYPE");
+
+            
+            //KICK
+            auto& kickLevel = *apvts.getRawParameterValue("KICK_LEVEL");
+            auto& kickDelay = *apvts.getRawParameterValue("KICK_DELAY");
+
+            voice->updateKick(kickLevel.load(), kickDelay.load());
             voice->updateADSR(attack.load(), decay.load(), sustain.load(), release.load());
             voice->getOscillator().setWaveType(oscWaveChoice);
+            voice->getNoiseOscillator().setWaveType(noiseOscWaveChoice);
         }
     }
     
@@ -200,14 +211,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout ThwampAudioProcessor::create
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     // ADSR
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "ATTACK",  1 }, "Attack", juce::NormalisableRange<float> { 0.1f, 1.0f }, 0.1f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "ATTACK",  1 }, "Attack", juce::NormalisableRange<float> { 0.0f, 5.0f }, 0.01f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "DECAY",  1 }, "Decay", juce::NormalisableRange<float> { 0.1f, 1.0f }, 0.1f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "SUSTAIN",  1 }, "Sustain", juce::NormalisableRange<float> { 0.1f, 1.0f }, 1.0f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "RELEASE",  1 }, "Release", juce::NormalisableRange<float> { 0.1f, 3.0f }, 0.4f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "SUSTAIN",  1 }, "Sustain", juce::NormalisableRange<float> { 0.0f, 1.0f }, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "RELEASE",  1 }, "Release", juce::NormalisableRange<float> { 0.1f, 8.0f }, 1.0f));
     
-    
+    // OSC Controlls
     params.push_back(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID {"OSC1WAVETYPE", 1}, "Osc 1 Wave Type", juce::StringArray {"Sine", "Saw", "Square", "Noise", "Pulse" }, 0));
     
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID {"OSC2WAVETYPE", 1}, "Osc 2 Wave Type", juce::StringArray {"Sine", "Saw", "Square", "Noise", "Pulse" }, 3));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_LEVEL", 1}, "Kick Level", 0.0f, 100.0f, 0.0f));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_DELAY", 1}, "Kick Level", 0.0f, 1.0f, 0.0f));
+
+
+//
     return { params.begin(), params.end() };
 }
 

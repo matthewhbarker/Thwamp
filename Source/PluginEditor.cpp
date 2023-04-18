@@ -11,13 +11,15 @@
 
 //==============================================================================
 ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts)
+    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts), kick (audioProcessor.apvts)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (screenWidth, screenHeight);
-//    addAndMakeVisible(waveformDisplay);
+    addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(adsr);
+    addAndMakeVisible(kick);
+    
 }
 
 ThwampAudioProcessorEditor::~ThwampAudioProcessorEditor()
@@ -34,12 +36,16 @@ void ThwampAudioProcessorEditor::paint (juce::Graphics& g)
 
 void ThwampAudioProcessorEditor::resized()
 {
-    float buffer = 50.0f;
-//    float waveFormDisplayWidth = 500.0f;
-//    float waveFormDisplayHeight = 150.0f;
-//    waveformDisplay.setBounds(screenWidth/2 - waveFormDisplayWidth/2, buffer, waveFormDisplayWidth, waveFormDisplayHeight);
+    float buffer = 10.0f;
+    float waveFormDisplayWidth = 500.0f;
+    float waveFormDisplayHeight = 150.0f;
+    waveformDisplay.setBounds(screenWidth/2 - waveFormDisplayWidth/2, buffer, waveFormDisplayWidth, waveFormDisplayHeight);
     
-    float adsrComponentWidth = 250.0f;
-    float adsrComponentHeight = 150.0f;
-    adsr.setBounds(buffer, getHeight()/2 + adsrComponentHeight, adsrComponentWidth, adsrComponentHeight);
+    float adsrComponentWidth = getWidth() - (2*buffer);
+    float adsrComponentHeight = getHeight()/4 - (2*buffer);
+    adsr.setBounds(buffer, getHeight()/2 + buffer, adsrComponentWidth, adsrComponentHeight);
+    
+    float kickComponentWidth = getWidth()/2 - (2*buffer);
+    float kickComponentHeight = getHeight()/4 - (2*buffer);
+    kick.setBounds(buffer, 3*getHeight()/4 + buffer, kickComponentWidth, kickComponentHeight);
 }

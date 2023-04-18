@@ -16,6 +16,8 @@
 #include "Data/AdsrData.h"
 #include "Data/OscData.h"
 
+#include "Data/LFO.h"
+
 class SynthVoice : public juce::SynthesiserVoice
 {
 public:
@@ -28,18 +30,36 @@ public:
     void renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override;
     
     void updateADSR(const float attack, const float decay, const float sustain, const float release);
-    void updateGain(float newGain);
+    void updateOscGain(float newGain);
+    void updateNoiseGain(float newGain);
+    void updateKick(float newKickLevel, float newKickDelay);
     
     OscData& getOscillator() {return osc; }
+    OscData& getNoiseOscillator() { return noiseOsc; }
     
 private:
     
     AdsrData adsr;
     juce::AudioBuffer<float> synthBuffer;
+    float kickLevel;
+    float kickDelay;
     
     OscData osc;
+    OscData noiseOsc;
 
-    juce::dsp::Gain<float> gain;
+    juce::dsp::Gain<float> oscGain;
+    juce::dsp::Gain<float> noiseGain;
+    
+    int activeNoteCount = 0;
+    AdsrData kickAdsr;
+    int currentNote;
+    
+    int kickSampleCounter;
+    
+    LFO kickLfo;
+    
+    float saturation(float input, float amount);
+    
     bool isPrepared { false };
     
 };

@@ -18,5 +18,10 @@ public:
     void setWaveFrequency(const int midiNoteNumber);
     void setWaveType(const int choice);
     
+    void updateKickMod(float newKickMod);
+    
 private:
+    
+    float kickMod { 0.0f };
+    
 };
