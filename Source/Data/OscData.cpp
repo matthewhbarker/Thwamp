@@ -23,7 +23,7 @@ void OscData::getNextAudioBlock(juce::dsp::AudioBlock<float>& audioBlock)
 
 void OscData::setWaveFrequency(const int midiNoteNumber)
 {
-    setFrequency(juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber));
+    setFrequency(juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber) + (kickMod));
 }
 
 void OscData::setWaveType(const int choice)
@@ -53,4 +53,8 @@ void OscData::setWaveType(const int choice)
             jassertfalse; // something went wrong
             break;
     }
+}
+
+void OscData::updateKickMod(float newKickMod) {
+    kickMod = newKickMod; 
 }

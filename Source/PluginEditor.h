@@ -12,6 +12,7 @@
 #include "PluginProcessor.h"
 #include "UI/WaveformDisplay.h"
 #include "UI/AdsrComponent.h"
+#include "UI/KickComponent.h"
 
 //==============================================================================
 /**
@@ -34,6 +35,7 @@ private:
     
     WaveformDisplay waveformDisplay;
     AdsrComponent adsr;
+    KickComponent kick; 
 
     float screenWidth = 600.0f;
     float screenHeight = 400.0f;
