@@ -43,53 +43,6 @@ void LFO::setShape(float shp)
 
 float LFO::getNextSample()
 {
-//    // Calculate the period (p) from the frequency
-//    float p = 1.0f / frequency;
-//
-//    // Convert the phase (0 to 2pi) to a time variable (t) in the range of 0 to p
-//    float t = phase * p / (2.0f * juce::MathConstants<float>::pi);
-//
-////    // Calculate the triangle wave using the Wikipedia equation
-////    float triangle = 2.0f * std::abs(t / p - std::floor(t / p + 0.5f));
-////
-////    float shapeFactor = 5.0f; // You can adjust this value to change the skewness of the waveform
-////    float skewedTriangle = std::pow(triangle, shapeFactor);
-////
-////    float maxValue = std::pow(1.0f, shapeFactor);
-////    float normalizedSkewedTriangle = skewedTriangle / maxValue;
-////
-////
-////    // Scale the triangle wave by the amplitude
-////    //float sample = amplitude * triangle;
-////    float sample = amplitude * normalizedSkewedTriangle;
-////     Calculate the triangle wave using the Wikipedia equation
-//    // Calculate the custom sine wave
-//    // Calculate the first triangle wave
-//        float triangle1 = 2.0f * std::abs(t / p - std::floor(t / p + 0.5f));
-//
-//        // Calculate the second triangle wave with a phase offset
-//        float phaseOffset = 0.5f; // Adjust this value to change the phase difference
-//        float t2 = (phase + phaseOffset) * p / (2.0f * juce::MathConstants<float>::pi);
-//        float triangle2 = 2.0f * std::abs(t2 / p - std::floor(t2 / p + 0.5f));
-//
-//        // Combine the two triangle waves and normalize the result
-//        float combinedWave = (triangle1 + triangle2) / 2.0f;
-//
-//        // Scale the combined wave by the amplitude
-//        float sample = amplitude * combinedWave;
-//
-//
-//    // Update the phase
-//    phase += phaseIncrement;
-//
-//    if (phase >= juce::MathConstants<float>::twoPi)
-//    {
-//        phase -= juce::MathConstants<float>::twoPi;
-//        oneCycleFinished = true;
-//    }
-//
-//    return sample;
-    
     // Calculate the period (p) from the frequency
     float p = 1.0f / frequency;
 
@@ -98,30 +51,25 @@ float LFO::getNextSample()
 
     // Calculate the exponential increase and decrease
     float expWave;
-    if (t < p / 2.0f) {
-        expWave = std::exp(t * 2.0f / p) - 1.0f;
+    if (t < p * peakPosition) {
+        expWave = std::pow(std::exp(t / (p * peakPosition)) - 1.0f, attackCurve);
+        // Normalize the attack part
+        float attackMaxValue = std::pow(std::exp(1) - 1, attackCurve);
+        expWave /= attackMaxValue;
     } else {
-        expWave = std::exp((p - t) * 2.0f / p) - 1.0f;
+        expWave = std::pow(std::exp((p - t) / (p * (1 - peakPosition))) - 1.0f, decayCurve);
+        // Normalize the decay part
+        float decayMaxValue = std::pow(std::exp(1) - 1, decayCurve);
+        expWave /= decayMaxValue;
     }
 
-    // Normalize the wave
-    float maxValue = std::exp(1) - 1;
-    float normalizedExpWave = expWave / maxValue;
-
     // Scale the wave by the amplitude
-    float sample = amplitude * normalizedExpWave;
+    float sample = amplitude * expWave;
 
     // Update the phase
     phase += phaseIncrement;
-
-    if (phase >= juce::MathConstants<float>::twoPi)
-    {
-        phase -= juce::MathConstants<float>::twoPi;
-        oneCycleFinished = true;
-    }
-
-    return sample;
     
+    return sample;
 }
 
 
@@ -132,6 +80,11 @@ bool LFO::isOneCycleFinished() const
 
 void LFO::restartCycle() {
     oneCycleFinished = false;
+    phase = 0;
+}
+
+void LFO::endCycle() {
+    oneCycleFinished = true;
 }
 
 void LFO::setPhase(float newPhase) {
@@ -141,3 +94,13 @@ void LFO::setPhase(float newPhase) {
 float LFO::getPhase() {
     return phase; 
 }
+
+void LFO::setPeakPosition(float newPeakPosition) {
+    peakPosition = newPeakPosition;
+}
+
+void LFO::setAttackDecay(float newAttackCurve, float newDecayCurve) {
+    attackCurve = newAttackCurve;
+    decayCurve = newDecayCurve;
+}
+

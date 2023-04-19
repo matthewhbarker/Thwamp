@@ -32,7 +32,10 @@ public:
     void updateADSR(const float attack, const float decay, const float sustain, const float release);
     void updateOscGain(float newGain);
     void updateNoiseGain(float newGain);
-    void updateKick(float newKickLevel, float newKickDelay);
+    void updateKick(float newKickAmplitude, float newKickFrequency, float newPeakPosition, float newAttackCurve, float newDecayCurve);
+    
+    void updateEffectEnvelopes(float saturationDecayTime, float distortionDecayTime);
+    void updateEffectLevels(float newSaturationLevel, float newDistortionLevel);
     
     OscData& getOscillator() {return osc; }
     OscData& getNoiseOscillator() { return noiseOsc; }
@@ -41,8 +44,8 @@ private:
     
     AdsrData adsr;
     juce::AudioBuffer<float> synthBuffer;
-    float kickLevel;
-    float kickDelay;
+    float kickAmplitude;
+    float kickFrequency;
     
     OscData osc;
     OscData noiseOsc;
@@ -54,12 +57,34 @@ private:
     AdsrData kickAdsr;
     int currentNote;
     
-    int kickSampleCounter;
     
     LFO kickLfo;
     
-    float saturation(float input, float amount);
+    juce::ADSR saturationEnv;
+    juce::ADSR distortionEnv;
     
+    float saturationAmount = 12.0f; // Adjust this value to control the amount of saturation
+    float saturationLevel = 12.0f;
+    
+    float distortionThreshold = 0.9f;
+    float distortionLevel = 0.9f;
+    
+    float saturation(float input, float amount);
+    float hardClipping(float input, float threshold);
+        
+    struct TransientParameters
+    {
+        float attackTime = 0.0f; // Attack time for the transient (in milliseconds)
+        float decayTime = 0.0f;  // Decay time for the transient (in milliseconds)
+        float strength = 0.0f;   // Strength of the transient
+    };
+
+    TransientParameters transientParams;
+    void applyTransient(juce::AudioBuffer<float>& buffer, const TransientParameters& params, double sampleRate);
+    void generateTransientEnvelope(juce::AudioBuffer<float>& envelopeBuffer, const TransientParameters& params, double sampleRate);
+
+
+        
     bool isPrepared { false };
     
 };
