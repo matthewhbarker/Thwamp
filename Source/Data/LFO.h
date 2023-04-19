@@ -25,8 +25,11 @@ public:
     float getNextSample();
     bool isOneCycleFinished() const;
     void restartCycle();
+    void endCycle(); 
     void setPhase(float newPhase);
     float getPhase();
+    void setPeakPosition(float newPeakPosition);
+    void setAttackDecay(float newAttackCurve, float newDecayCurve);
   
 
 
@@ -38,6 +41,9 @@ private:
     float phase;
     float phaseIncrement;
     bool oneCycleFinished;
+    float peakPosition;
+    float attackCurve = 2.0;
+    float decayCurve = 2.0;
 };
 
 

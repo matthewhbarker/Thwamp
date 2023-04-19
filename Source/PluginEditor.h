@@ -13,6 +13,7 @@
 #include "UI/WaveformDisplay.h"
 #include "UI/AdsrComponent.h"
 #include "UI/KickComponent.h"
+#include "UI/EffectsComponent.h"
 
 //==============================================================================
 /**
@@ -35,7 +36,8 @@ private:
     
     WaveformDisplay waveformDisplay;
     AdsrComponent adsr;
-    KickComponent kick; 
+    KickComponent kick;
+    EffectsComponent effects; 
 
     float screenWidth = 600.0f;
     float screenHeight = 400.0f;

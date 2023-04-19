@@ -11,7 +11,7 @@
 
 //==============================================================================
 ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts), kick (audioProcessor.apvts)
+    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts), kick (audioProcessor.apvts), effects (audioProcessor.apvts)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -19,6 +19,7 @@ ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
     addAndMakeVisible(waveformDisplay);
     addAndMakeVisible(adsr);
     addAndMakeVisible(kick);
+    addAndMakeVisible(effects);
     
 }
 
@@ -48,4 +49,8 @@ void ThwampAudioProcessorEditor::resized()
     float kickComponentWidth = getWidth()/2 - (2*buffer);
     float kickComponentHeight = getHeight()/4 - (2*buffer);
     kick.setBounds(buffer, 3*getHeight()/4 + buffer, kickComponentWidth, kickComponentHeight);
+    
+    float effectsComponentWidth = getWidth()/2 - (2*buffer);
+    float effectsComponentHeight = getHeight()/4 - (2*buffer);
+    effects.setBounds(getWidth()/2 + buffer, 3*getHeight()/4 + buffer, effectsComponentWidth, effectsComponentHeight);
 }

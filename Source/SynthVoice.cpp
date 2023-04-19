@@ -15,24 +15,44 @@ bool SynthVoice::canPlaySound (juce::SynthesiserSound* sound)
     return dynamic_cast<juce::SynthesiserSound*>(sound) != nullptr;
 }
 
+// This function is called when a new note starts
 void SynthVoice::startNote (int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition)
 {
+    // Print to console when a note is played
     std::cout << "kick hit" << std::endl;
-
+    
+    // Set the current note and update the oscillators' frequency
     currentNote = midiNoteNumber - 48;
     osc.setWaveFrequency(currentNote);
     noiseOsc.setWaveFrequency(currentNote);
+
+    // Trigger the ADSR envelope and increment the active note count
     adsr.noteOn();
     activeNoteCount++;
-    // kickLfo.setFrequency(10.0f); // Decrease the LFO frequency for a longer duration
-    kickLfo.setAmplitude(20.0f); // Increase the LFO amplitude for a more pronounced kick effect
-    kickLfo.setFrequency(9000.0f); // You can adjust this value for the desired LFO frequency
-    kickLfo.restartCycle(); // Reset LFO phase
-
-//    if (activeNoteCount == 1) {
-//        kickLfo.setPhase(0.0f); // Reset the phase of the LFO
-//    }
     
+    // Set the base MIDI note and calculate frequencies for the current and base notes
+    int baseMidiNote = 72; // C5
+    float currentFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    float baseFrequency = juce::MidiMessage::getMidiNoteInHertz(baseMidiNote);
+
+    // Calculate and set the amplitude scaling factor
+    float amplitudeScalingFactor = 1 + 0.25f * ((currentFrequency - baseFrequency) / (baseFrequency));
+    float updatedKickAmplitude = kickAmplitude * amplitudeScalingFactor;
+    kickLfo.setAmplitude(updatedKickAmplitude); // Set the adjusted LFO amplitude
+
+    // Calculate and set the updated kick frequency
+    float kickFreqStabilizer = kickFrequency * (currentFrequency / baseFrequency - 1); // makes the kick sound better at higher Freqs
+    float updatedKickFrequency = kickFrequency + kickFreqStabilizer;
+    std::cout << "Old Kick Frequency: " << kickFrequency << ", New Kick Frequency: " << updatedKickFrequency << std::endl;
+    kickLfo.setFrequency(updatedKickFrequency);
+
+    // Reset LFO phase
+    kickLfo.restartCycle();
+
+    // Set transient parameters
+    transientParams.attackTime = 0.1f; // Attack time for the transient (in milliseconds)
+    transientParams.decayTime = 0.1f;  // Decay time for the transient (in milliseconds)
+    transientParams.strength = 0.2f;   // Strength of the transient
 }
 
 void SynthVoice::stopNote (float velocity, bool allowTailOff)
@@ -54,7 +74,6 @@ void SynthVoice::controllerMoved (int controllerNumber, int newControllerValue)
 {
     
 }
-
 void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels)
 {
     adsr.setSampleRate(sampleRate);
@@ -65,18 +84,17 @@ void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outpu
     spec.numChannels = outputChannels;
     
     osc.prepareToPlay(spec);
-    noiseOsc.prepareToPlay(spec);
-    
     oscGain.prepare(spec);
     oscGain.setGainLinear(0.3f);
     
+    noiseOsc.prepareToPlay(spec);
     noiseGain.prepare(spec);
-    noiseGain.setGainLinear(0.001f);
+    noiseGain.setGainLinear(0.0005f);
     
-    kickLevel = 50;
     kickLfo.prepareToPlay(sampleRate); // Add this line to initialize the LFO with the sample rate
-
-//    kickLfo.prepareToPlay(spec);
+    
+    saturationEnv.setSampleRate(sampleRate);
+    distortionEnv.setSampleRate(sampleRate);
     
     isPrepared = true;
 }
@@ -95,7 +113,11 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
     {
         float lfoValue = kickLfo.getNextSample();
         osc.updateKickMod(lfoValue);
-        std::cout << "LFO Value: " << lfoValue << ", LFO Phase: " << kickLfo.getPhase() << std::endl;
+        std::cout << "(" << kickLfo.getPhase() << ", " << lfoValue << ")," <<std::endl;
+        if (kickLfo.getPhase() >= juce::MathConstants<float>::twoPi) {
+            kickLfo.endCycle();
+        }
+        
     } else {
 //        std::cout << "kick end" << std::endl;
         osc.updateKickMod(0.0f);
@@ -125,16 +147,22 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
     
     adsr.applyEnvelopeToBuffer(synthBuffer, 0, synthBuffer.getNumSamples());
     
-    float saturationAmount = 5.0f; // Adjust this value to control the amount of saturation
-    
+    // applyTransient(synthBuffer, transientParams, getSampleRate());
+        
     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
     {
-        //outputBuffer.addFrom(channel, startSample, synthBuffer, channel, 0, numSamples);
-        
         for (int sample = 0; sample < numSamples; ++sample)
             {
-                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationAmount);
-                outputBuffer.addSample(channel, startSample + sample, saturatedSample);
+//                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationAmount);
+//                float distortedSample = hardClipping(saturatedSample, distortionThreshold);
+//                outputBuffer.addSample(channel, startSample + sample, distortedSample);
+                float saturationEnvValue = saturationEnv.getNextSample();
+                float distortionEnvValue = distortionEnv.getNextSample();
+
+                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationLevel * (1 - saturationEnvValue));
+                float distortedSample = hardClipping(saturatedSample, distortionLevel * (1 - distortionEnvValue));
+
+                outputBuffer.addSample(channel, startSample + sample, distortedSample);
             }
 
         if (!adsr.isActive())
@@ -159,13 +187,91 @@ void SynthVoice::updateNoiseGain(float newGain) {
     noiseGain.setGainLinear(newGain);
 }
 
-void SynthVoice::updateKick(float newKickLevel, float newKickDelay)
+void SynthVoice::updateKick(float newKickAmplitude, float newKickFrequency, float newPeakPosition, float newAttackCurve, float newDecayCurve)
 {
-    kickLevel = newKickLevel;
-    kickDelay = newKickDelay;
+    kickAmplitude = newKickAmplitude;
+    kickFrequency = newKickFrequency;
+    kickLfo.setPeakPosition(newPeakPosition);
+    kickLfo.setAttackDecay(newAttackCurve, newDecayCurve);
 }
 
 float SynthVoice::saturation(float input, float amount)
 {
     return std::tanh(amount * input) / std::tanh(amount);
 }
+
+float SynthVoice::hardClipping(float input, float threshold)
+{
+    if (input > threshold)
+        return threshold;
+    else if (input < -threshold)
+        return -threshold;
+    else
+        return input;
+}
+
+void SynthVoice::updateEffectEnvelopes(float saturationDecayTime, float distortionDecayTime)
+{
+    juce::ADSR::Parameters saturationEnvParams;
+    saturationEnvParams.attack = 0.0f;
+    saturationEnvParams.decay = saturationDecayTime;
+    saturationEnvParams.sustain = 0.0f;
+    saturationEnvParams.release = 0.0f;
+
+    saturationEnv.setParameters(saturationEnvParams);
+
+    juce::ADSR::Parameters distortionEnvParams;
+    distortionEnvParams.attack = 0.0f;
+    distortionEnvParams.decay = distortionDecayTime;
+    distortionEnvParams.sustain = 0.0f;
+    distortionEnvParams.release = 0.0f;
+
+    distortionEnv.setParameters(distortionEnvParams);
+}
+
+void SynthVoice::updateEffectLevels(float newSaturationLevel, float newDistortionLevel)
+{
+    saturationLevel = newSaturationLevel;
+    distortionLevel = newDistortionLevel;
+}
+
+//void SynthVoice::applyTransient(juce::AudioBuffer<float>& buffer, const TransientParameters& params, double sampleRate)
+//{
+//    juce::AudioBuffer<float> envelopeBuffer;
+//    generateTransientEnvelope(envelopeBuffer, params, sampleRate);
+//
+//    int totalSamples = envelopeBuffer.getNumSamples();
+//
+//    for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+//    {
+//        float* channelData = buffer.getWritePointer(channel);
+//
+//        for (int sample = 0; sample < totalSamples; ++sample)
+//        {
+//            float transientAmplitude = envelopeBuffer.getSample(0, sample);
+//            channelData[sample] = (1.0f - transientAmplitude) * channelData[sample] + transientAmplitude * (channelData[sample] + transientAmplitude * channelData[sample]);
+//        }
+//    }
+//}
+//
+//void SynthVoice::generateTransientEnvelope(juce::AudioBuffer<float>& envelopeBuffer, const TransientParameters& params, double sampleRate)
+//{
+//    int attackSamples = static_cast<int>(params.attackTime * sampleRate / 1000.0);
+//    int decaySamples = static_cast<int>(params.decayTime * sampleRate / 1000.0);
+//    int totalSamples = attackSamples + decaySamples;
+//
+//    envelopeBuffer.setSize(1, totalSamples);
+//    envelopeBuffer.clear();
+//
+//    float* envelopeData = envelopeBuffer.getWritePointer(0);
+//
+//    for (int i = 0; i < attackSamples; ++i)
+//    {
+//        envelopeData[i] = juce::jmap<float>(static_cast<float>(i), 0.0f, static_cast<float>(attackSamples), 0.0f, params.strength);
+//    }
+//
+//    for (int i = attackSamples; i < totalSamples; ++i)
+//    {
+//        envelopeData[i] = juce::jmap<float>(static_cast<float>(i), static_cast<float>(attackSamples), static_cast<float>(totalSamples), params.strength, 0.0f);
+//    }
+//}

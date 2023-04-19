@@ -167,10 +167,22 @@ void ThwampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
             
             //KICK
-            auto& kickLevel = *apvts.getRawParameterValue("KICK_LEVEL");
-            auto& kickDelay = *apvts.getRawParameterValue("KICK_DELAY");
-
-            voice->updateKick(kickLevel.load(), kickDelay.load());
+            auto& kickAmplitude = *apvts.getRawParameterValue("KICK_AMPLITUDE");
+            auto& kickFrequency = *apvts.getRawParameterValue("KICK_FREQUENCY");
+            auto& kickPeakPosition = *apvts.getRawParameterValue("KICK_PEAK_POSITION");
+            auto& kickAttackCurve = *apvts.getRawParameterValue("KICK_ATTACK_CURVE");
+            auto& kickDecayCurve = *apvts.getRawParameterValue("KICK_DECAY_CURVE");
+    
+            
+            // Effect envelopes
+            auto& saturationLevel = *apvts.getRawParameterValue("SATURATION_LEVEL");
+            auto& saturationDecay = *apvts.getRawParameterValue("SATURATION_DECAY");
+            auto& distortionLevel = *apvts.getRawParameterValue("DISTORTION_LEVEL");
+            auto& distortionDecay = *apvts.getRawParameterValue("DISTORTION_DECAY");
+            
+            voice->updateEffectLevels(saturationLevel.load(), distortionLevel.load());
+            voice->updateEffectEnvelopes(saturationDecay.load(), distortionDecay.load());
+            voice->updateKick(kickAmplitude.load(), kickFrequency.load(), kickPeakPosition.load(), kickAttackCurve.load(), kickDecayCurve.load());
             voice->updateADSR(attack.load(), decay.load(), sustain.load(), release.load());
             voice->getOscillator().setWaveType(oscWaveChoice);
             voice->getNoiseOscillator().setWaveType(noiseOscWaveChoice);
@@ -221,10 +233,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout ThwampAudioProcessor::create
     
     params.push_back(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID {"OSC2WAVETYPE", 1}, "Osc 2 Wave Type", juce::StringArray {"Sine", "Saw", "Square", "Noise", "Pulse" }, 3));
     
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_LEVEL", 1}, "Kick Level", 0.0f, 100.0f, 0.0f));
-    
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_DELAY", 1}, "Kick Level", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_AMPLITUDE", 1}, "Kick amplitude", 20.0f, 90.0f, 65.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_FREQUENCY", 1}, "Kick frequency", 3000.0f, 12000.0f, 5000.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_PEAK_POSITION", 1}, "Kick Peak Position", 0.0f, 1.0f, 0.3f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_ATTACK_CURVE", 1}, "Kick Attack Curve", 1.0f, 5.0f, 4.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_DECAY_CURVE", 1}, "Kick Decay Curve", 1.0f, 5.0f, 1.0f));
 
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"SATURATION_LEVEL", 1}, "Saturation Level", juce::NormalisableRange<float> {4.0f, 12.0f}, 6.8f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"SATURATION_DECAY", 1}, "Saturation Decay", juce::NormalisableRange<float> {0.0f, 1.0f}, 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"DISTORTION_LEVEL", 1}, "Distortion Level", juce::NormalisableRange<float> {0.1f, 1.0f}, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"DISTORTION_DECAY", 1}, "Distortion Decay", juce::NormalisableRange<float> {0.0f, 1.0f}, 0.5f));
+
+    
 
 //
     return { params.begin(), params.end() };
