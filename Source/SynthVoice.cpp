@@ -15,12 +15,8 @@ bool SynthVoice::canPlaySound (juce::SynthesiserSound* sound)
     return dynamic_cast<juce::SynthesiserSound*>(sound) != nullptr;
 }
 
-// This function is called when a new note starts
 void SynthVoice::startNote (int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition)
 {
-    // Print to console when a note is played
-    //std::cout << "kick hit" << std::endl;
-    
     // Set the current note and update the oscillators' frequency
     currentNote = midiNoteNumber - 48;
     osc.setWaveFrequency(currentNote);
@@ -38,7 +34,7 @@ void SynthVoice::startNote (int midiNoteNumber, float velocity, juce::Synthesise
     // Calculate and set the amplitude scaling factor
     float amplitudeScalingFactor = 1 + 0.25f * ((currentFrequency - baseFrequency) / (baseFrequency));
     float updatedKickAmplitude = kickAmplitude * amplitudeScalingFactor;
-    kickLfo.setAmplitude(updatedKickAmplitude); // Set the adjusted LFO amplitude
+    kickLfo.setAmplitude(updatedKickAmplitude);
     
     // Calculate and set the updated kick frequency
     float kickFreqStabilizer = kickFrequency * (currentFrequency / baseFrequency - 1); // makes the kick sound better at higher Freqs

@@ -71,7 +71,7 @@ private:
     juce::ADSR saturationEnv;
     juce::ADSR distortionEnv;
     
-    float saturationAmount = 12.0f; // Adjust this value to control the amount of saturation
+    float saturationAmount = 12.0f; 
     float saturationLevel = 12.0f;
     
     float distortionThreshold = 0.9f;
