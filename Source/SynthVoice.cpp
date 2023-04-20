@@ -1,12 +1,12 @@
 /*
-  ==============================================================================
-
-    SynthVoice.cpp
-    Created: 8 Apr 2023 1:12:50pm
-    Author:  Matthew Barker
-
-  ==============================================================================
-*/
+ ==============================================================================
+ 
+ SynthVoice.cpp
+ Created: 8 Apr 2023 1:12:50pm
+ Author:  Matthew Barker
+ 
+ ==============================================================================
+ */
 
 #include "SynthVoice.h"
 
@@ -19,13 +19,13 @@ bool SynthVoice::canPlaySound (juce::SynthesiserSound* sound)
 void SynthVoice::startNote (int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition)
 {
     // Print to console when a note is played
-    std::cout << "kick hit" << std::endl;
+    //std::cout << "kick hit" << std::endl;
     
     // Set the current note and update the oscillators' frequency
     currentNote = midiNoteNumber - 48;
     osc.setWaveFrequency(currentNote);
     noiseOsc.setWaveFrequency(currentNote);
-
+    
     // Trigger the ADSR envelope and increment the active note count
     adsr.noteOn();
     activeNoteCount++;
@@ -34,25 +34,22 @@ void SynthVoice::startNote (int midiNoteNumber, float velocity, juce::Synthesise
     int baseMidiNote = 72; // C5
     float currentFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
     float baseFrequency = juce::MidiMessage::getMidiNoteInHertz(baseMidiNote);
-
+    
     // Calculate and set the amplitude scaling factor
     float amplitudeScalingFactor = 1 + 0.25f * ((currentFrequency - baseFrequency) / (baseFrequency));
     float updatedKickAmplitude = kickAmplitude * amplitudeScalingFactor;
     kickLfo.setAmplitude(updatedKickAmplitude); // Set the adjusted LFO amplitude
-
+    
     // Calculate and set the updated kick frequency
     float kickFreqStabilizer = kickFrequency * (currentFrequency / baseFrequency - 1); // makes the kick sound better at higher Freqs
     float updatedKickFrequency = kickFrequency + kickFreqStabilizer;
     std::cout << "Old Kick Frequency: " << kickFrequency << ", New Kick Frequency: " << updatedKickFrequency << std::endl;
     kickLfo.setFrequency(updatedKickFrequency);
-
+    
     // Reset LFO phase
     kickLfo.restartCycle();
-
-    // Set transient parameters
-    transientParams.attackTime = 0.1f; // Attack time for the transient (in milliseconds)
-    transientParams.decayTime = 0.1f;  // Decay time for the transient (in milliseconds)
-    transientParams.strength = 0.2f;   // Strength of the transient
+        
+    transientLfo.restartCycle();
 }
 
 void SynthVoice::stopNote (float velocity, bool allowTailOff)
@@ -91,7 +88,14 @@ void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outpu
     noiseGain.prepare(spec);
     noiseGain.setGainLinear(0.0005f);
     
+    
+    transientOsc.prepareToPlay(spec);
+    transientOsc.setWaveType(3);
+    transientGain.prepare(spec);
+    transientGain.setGainLinear(0.001);
+
     kickLfo.prepareToPlay(sampleRate); // Add this line to initialize the LFO with the sample rate
+    transientLfo.prepareToPlay(sampleRate);
     
     saturationEnv.setSampleRate(sampleRate);
     distortionEnv.setSampleRate(sampleRate);
@@ -101,7 +105,7 @@ void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outpu
 
 
 void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int startSample, int numSamples) {
-
+    
     jassert(isPrepared);
     
     if (!isVoiceActive()) return;
@@ -113,16 +117,31 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
     {
         float lfoValue = kickLfo.getNextSample();
         osc.updateKickMod(lfoValue);
-        std::cout << "(" << kickLfo.getPhase() << ", " << lfoValue << ")," <<std::endl;
+        // std::cout << "(" << kickLfo.getPhase() << ", " << lfoValue << ")," <<std::endl;
         if (kickLfo.getPhase() >= juce::MathConstants<float>::twoPi) {
             kickLfo.endCycle();
         }
         
     } else {
-//        std::cout << "kick end" << std::endl;
+        //        std::cout << "kick end" << std::endl;
         osc.updateKickMod(0.0f);
     }
-//
+    
+    if (!transientLfo.isOneCycleFinished())
+    {
+        float lfoValue = transientLfo.getNextSample();
+        transientGain.setGainLinear(lfoValue/100); // Instead of transientGain.setGainLinear(lfoValue);
+        std::cout << "(" << transientLfo.getPhase() << ", " << lfoValue << ")," <<std::endl;
+        if (transientLfo.getPhase() >= juce::MathConstants<float>::twoPi) {
+            transientLfo.endCycle();
+        }
+        
+    } else {
+        transientGain.setGainLinear(0.0f); // Multiply the transient's gain by 0 to make it inaudible
+        // std::cout << "end" << std::endl;
+    }
+    
+    //
     
     osc.setWaveFrequency(currentNote);
     
@@ -132,7 +151,7 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
     juce::dsp::AudioBlock<float> oscBlock{oscBuffer};
     osc.getNextAudioBlock(oscBlock);
     oscGain.process(juce::dsp::ProcessContextReplacing<float>(oscBlock));
-
+    
     juce::AudioBuffer<float> noiseBuffer;
     noiseBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, true);
     noiseBuffer.clear();
@@ -140,31 +159,40 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
     noiseOsc.getNextAudioBlock(noiseBlock);
     noiseGain.process(juce::dsp::ProcessContextReplacing<float>(noiseBlock));
     
+    juce::AudioBuffer<float> transientBuffer;
+        transientBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, true);
+        if (transientGain.getGainLinear() != 0.0f) {
+            juce::dsp::AudioBlock<float> transientBlock{transientBuffer};
+            transientOsc.getNextAudioBlock(transientBlock);
+            transientGain.process(juce::dsp::ProcessContextReplacing<float>(transientBlock));
+        } else {
+            transientBuffer.clear();
+        }
+    
     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
         synthBuffer.addFrom(channel, 0, oscBuffer, channel, 0, numSamples);
         synthBuffer.addFrom(channel, 0, noiseBuffer, channel, 0, numSamples);
+        //synthBuffer.addFrom(channel, 0, transientBuffer, channel, 0, numSamples); // Adds the clicking transiet!
     }
     
     adsr.applyEnvelopeToBuffer(synthBuffer, 0, synthBuffer.getNumSamples());
     
-    // applyTransient(synthBuffer, transientParams, getSampleRate());
-        
     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
     {
         for (int sample = 0; sample < numSamples; ++sample)
-            {
-//                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationAmount);
-//                float distortedSample = hardClipping(saturatedSample, distortionThreshold);
-//                outputBuffer.addSample(channel, startSample + sample, distortedSample);
-                float saturationEnvValue = saturationEnv.getNextSample();
-                float distortionEnvValue = distortionEnv.getNextSample();
-
-                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationLevel * (1 - saturationEnvValue));
-                float distortedSample = hardClipping(saturatedSample, distortionLevel * (1 - distortionEnvValue));
-
-                outputBuffer.addSample(channel, startSample + sample, distortedSample);
-            }
-
+        {
+            //                float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationAmount);
+            //                float distortedSample = hardClipping(saturatedSample, distortionThreshold);
+            //                outputBuffer.addSample(channel, startSample + sample, distortedSample);
+            float saturationEnvValue = saturationEnv.getNextSample();
+            float distortionEnvValue = distortionEnv.getNextSample();
+            
+            float saturatedSample = saturation(synthBuffer.getSample(channel, sample), saturationLevel * (1 - saturationEnvValue));
+            float distortedSample = hardClipping(saturatedSample, distortionLevel * (1 - distortionEnvValue));
+            
+            outputBuffer.addSample(channel, startSample + sample, distortedSample);
+        }
+        
         if (!adsr.isActive())
         {
             clearCurrentNote();
@@ -174,9 +202,9 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
 }
 
 
-void SynthVoice::updateADSR(const float attack, const float decay, const float sustain, const float release)
+void SynthVoice::updateADSR(const float attack, const float decay, const float sustain, const float release, const float offset, const double sampleRate)
 {
-    adsr.updateADSR(attack, decay, sustain, release);
+    adsr.updateADSR(attack, decay, sustain, release, offset, sampleRate);
 }
 
 void SynthVoice::updateOscGain(float newGain) {
@@ -194,6 +222,15 @@ void SynthVoice::updateKick(float newKickAmplitude, float newKickFrequency, floa
     kickLfo.setPeakPosition(newPeakPosition);
     kickLfo.setAttackDecay(newAttackCurve, newDecayCurve);
 }
+
+void SynthVoice::updateTransient(float newTransientAmplitude, float newTransientFrequency, float newTransientPeakPosition, float newAttackCurve, float newDecayCurve) {
+    transientLfo.setAmplitude(newTransientAmplitude);
+    transientLfo.setFrequency(newTransientFrequency);
+    transientLfo.setPeakPosition(newTransientPeakPosition);
+    transientLfo.setAttackDecay(newAttackCurve, newDecayCurve);
+}
+
+
 
 float SynthVoice::saturation(float input, float amount)
 {
@@ -217,15 +254,15 @@ void SynthVoice::updateEffectEnvelopes(float saturationDecayTime, float distorti
     saturationEnvParams.decay = saturationDecayTime;
     saturationEnvParams.sustain = 0.0f;
     saturationEnvParams.release = 0.0f;
-
+    
     saturationEnv.setParameters(saturationEnvParams);
-
+    
     juce::ADSR::Parameters distortionEnvParams;
     distortionEnvParams.attack = 0.0f;
     distortionEnvParams.decay = distortionDecayTime;
     distortionEnvParams.sustain = 0.0f;
     distortionEnvParams.release = 0.0f;
-
+    
     distortionEnv.setParameters(distortionEnvParams);
 }
 
@@ -235,43 +272,3 @@ void SynthVoice::updateEffectLevels(float newSaturationLevel, float newDistortio
     distortionLevel = newDistortionLevel;
 }
 
-//void SynthVoice::applyTransient(juce::AudioBuffer<float>& buffer, const TransientParameters& params, double sampleRate)
-//{
-//    juce::AudioBuffer<float> envelopeBuffer;
-//    generateTransientEnvelope(envelopeBuffer, params, sampleRate);
-//
-//    int totalSamples = envelopeBuffer.getNumSamples();
-//
-//    for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
-//    {
-//        float* channelData = buffer.getWritePointer(channel);
-//
-//        for (int sample = 0; sample < totalSamples; ++sample)
-//        {
-//            float transientAmplitude = envelopeBuffer.getSample(0, sample);
-//            channelData[sample] = (1.0f - transientAmplitude) * channelData[sample] + transientAmplitude * (channelData[sample] + transientAmplitude * channelData[sample]);
-//        }
-//    }
-//}
-//
-//void SynthVoice::generateTransientEnvelope(juce::AudioBuffer<float>& envelopeBuffer, const TransientParameters& params, double sampleRate)
-//{
-//    int attackSamples = static_cast<int>(params.attackTime * sampleRate / 1000.0);
-//    int decaySamples = static_cast<int>(params.decayTime * sampleRate / 1000.0);
-//    int totalSamples = attackSamples + decaySamples;
-//
-//    envelopeBuffer.setSize(1, totalSamples);
-//    envelopeBuffer.clear();
-//
-//    float* envelopeData = envelopeBuffer.getWritePointer(0);
-//
-//    for (int i = 0; i < attackSamples; ++i)
-//    {
-//        envelopeData[i] = juce::jmap<float>(static_cast<float>(i), 0.0f, static_cast<float>(attackSamples), 0.0f, params.strength);
-//    }
-//
-//    for (int i = attackSamples; i < totalSamples; ++i)
-//    {
-//        envelopeData[i] = juce::jmap<float>(static_cast<float>(i), static_cast<float>(attackSamples), static_cast<float>(totalSamples), params.strength, 0.0f);
-//    }
-//}
