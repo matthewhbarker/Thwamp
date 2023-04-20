@@ -180,10 +180,18 @@ void ThwampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             auto& distortionLevel = *apvts.getRawParameterValue("DISTORTION_LEVEL");
             auto& distortionDecay = *apvts.getRawParameterValue("DISTORTION_DECAY");
             
+            //TRANSIENT
+            auto& transientAmplitude = *apvts.getRawParameterValue("TRANSIENT_AMPLITUDE");
+            auto& transientFrequency = *apvts.getRawParameterValue("TRANSIENT_FREQUENCY");
+            auto& transientPeakPosition = *apvts.getRawParameterValue("TRANSIENT_PEAK_POSITION");
+            auto& transientAttackCurve = *apvts.getRawParameterValue("TRANSIENT_ATTACK_CURVE");
+            auto& transientDecayCurve = *apvts.getRawParameterValue("TRANSIENT_DECAY_CURVE");
+            
             voice->updateEffectLevels(saturationLevel.load(), distortionLevel.load());
             voice->updateEffectEnvelopes(saturationDecay.load(), distortionDecay.load());
             voice->updateKick(kickAmplitude.load(), kickFrequency.load(), kickPeakPosition.load(), kickAttackCurve.load(), kickDecayCurve.load());
-            voice->updateADSR(attack.load(), decay.load(), sustain.load(), release.load());
+            voice->updateTransient(transientAmplitude.load(), transientFrequency.load(), transientPeakPosition.load(), transientAttackCurve.load(), transientDecayCurve.load());
+            voice->updateADSR(attack.load(), decay.load(), sustain.load(), release.load(), 0.5, getSampleRate());
             voice->getOscillator().setWaveType(oscWaveChoice);
             voice->getNoiseOscillator().setWaveType(noiseOscWaveChoice);
         }
@@ -240,13 +248,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout ThwampAudioProcessor::create
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"KICK_DECAY_CURVE", 1}, "Kick Decay Curve", 1.0f, 5.0f, 1.0f));
 
     
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"SATURATION_LEVEL", 1}, "Saturation Level", juce::NormalisableRange<float> {4.0f, 12.0f}, 6.8f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"SATURATION_LEVEL", 1}, "Saturation Level", juce::NormalisableRange<float> {1.0f, 12.0f}, 6.8f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"SATURATION_DECAY", 1}, "Saturation Decay", juce::NormalisableRange<float> {0.0f, 1.0f}, 0.5f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"DISTORTION_LEVEL", 1}, "Distortion Level", juce::NormalisableRange<float> {0.1f, 1.0f}, 1.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"DISTORTION_DECAY", 1}, "Distortion Decay", juce::NormalisableRange<float> {0.0f, 1.0f}, 0.5f));
 
     
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"TRANSIENT_AMPLITUDE", 1}, "Transient amplitude", 0.0f, 1.0f, 0.1f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"TRANSIENT_FREQUENCY", 1}, "Transient frequency", 3000.0f, 20000.0f, 20000.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"TRANSIENT_PEAK_POSITION", 1}, "Transient Peak Position", 0.0f, 1.0f, 0.3f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"TRANSIENT_ATTACK_CURVE", 1}, "Transient Attack Curve", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID {"TRANSIENT_DECAY_CURVE", 1}, "Transient Decay Curve", 0.0f, 1.0f, 5.0f));
 
 //
     return { params.begin(), params.end() };

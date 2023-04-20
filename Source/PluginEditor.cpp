@@ -11,7 +11,7 @@
 
 //==============================================================================
 ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts), kick (audioProcessor.apvts), effects (audioProcessor.apvts)
+    : AudioProcessorEditor (&p), audioProcessor (p), adsr (audioProcessor.apvts), kick (audioProcessor.apvts), effects (audioProcessor.apvts), transient (audioProcessor.apvts)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -20,6 +20,7 @@ ThwampAudioProcessorEditor::ThwampAudioProcessorEditor (ThwampAudioProcessor& p)
     addAndMakeVisible(adsr);
     addAndMakeVisible(kick);
     addAndMakeVisible(effects);
+    addAndMakeVisible(transient);
     
 }
 
@@ -53,4 +54,8 @@ void ThwampAudioProcessorEditor::resized()
     float effectsComponentWidth = getWidth()/2 - (2*buffer);
     float effectsComponentHeight = getHeight()/4 - (2*buffer);
     effects.setBounds(getWidth()/2 + buffer, 3*getHeight()/4 + buffer, effectsComponentWidth, effectsComponentHeight);
+    
+    float transientComponentWidth = getWidth()/2 - (2*buffer);
+    float transientComponentHeight = getHeight()/4 - (2*buffer);
+    transient.setBounds(buffer, getHeight()/4 + buffer, transientComponentWidth, transientComponentHeight);
 }

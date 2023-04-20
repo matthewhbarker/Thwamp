@@ -28,11 +28,12 @@ public:
     void controllerMoved (int controllerNumber, int newControllerValue) override;
     void prepareToPlay (double sampleRate, int samplesPerBlock, int outputChannels);
     void renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override;
-    
-    void updateADSR(const float attack, const float decay, const float sustain, const float release);
+
+    void updateADSR(const float attack, const float decay, const float sustain, const float release, const float offset, const double sampleRate);
     void updateOscGain(float newGain);
     void updateNoiseGain(float newGain);
     void updateKick(float newKickAmplitude, float newKickFrequency, float newPeakPosition, float newAttackCurve, float newDecayCurve);
+    void updateTransient(float newTransientAmplitude, float newTransientFrequency, float newTransientPeakPosition, float newAttackCurve, float newDecayCurve);
     
     void updateEffectEnvelopes(float saturationDecayTime, float distortionDecayTime);
     void updateEffectLevels(float newSaturationLevel, float newDistortionLevel);
@@ -49,16 +50,23 @@ private:
     
     OscData osc;
     OscData noiseOsc;
+    OscData transientOsc;
+    
+    AdsrData transientAdsr;
+    
+    float transientAmplitude;
+    float transientFrequency; 
 
     juce::dsp::Gain<float> oscGain;
     juce::dsp::Gain<float> noiseGain;
+    juce::dsp::Gain<float> transientGain; 
     
     int activeNoteCount = 0;
     AdsrData kickAdsr;
     int currentNote;
     
-    
     LFO kickLfo;
+    LFO transientLfo;
     
     juce::ADSR saturationEnv;
     juce::ADSR distortionEnv;
@@ -71,18 +79,6 @@ private:
     
     float saturation(float input, float amount);
     float hardClipping(float input, float threshold);
-        
-    struct TransientParameters
-    {
-        float attackTime = 0.0f; // Attack time for the transient (in milliseconds)
-        float decayTime = 0.0f;  // Decay time for the transient (in milliseconds)
-        float strength = 0.0f;   // Strength of the transient
-    };
-
-    TransientParameters transientParams;
-    void applyTransient(juce::AudioBuffer<float>& buffer, const TransientParameters& params, double sampleRate);
-    void generateTransientEnvelope(juce::AudioBuffer<float>& envelopeBuffer, const TransientParameters& params, double sampleRate);
-
 
         
     bool isPrepared { false };
