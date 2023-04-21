@@ -1,8 +1,19 @@
 # THWAMP
 ## Bass Synth 
 
+## PROJECT FINAL REPORT
+
 ## Overview
-This project aims to develop a mono synthesizer plugin specifically designed for bass sounds. The plugin will feature various controls such as saturation, distortion, and a unique "kick" parameter to enhance the user's ability to create diverse and dynamic bass tones.
+
+For an overview, please refer to the overview written under 'PROJECT PROGRESS REPORT'.
+
+
+
+
+### PROJECT PROGRESS REPORT
+
+## Overview
+This project aims to develop a mono synthesizer plugin specifically designed for bass sounds - more specifcally, bass soudns heard in popular hip-hop music. The plugin will feature various controls such as saturation, distortion, and a unique "kick" parameter to enhance the user's ability to create diverse and dynamic bass tones.
 
 ## Team Members
 Matthew Barker: Project lead, responsible for overall design, coding, and documentation.
@@ -33,4 +44,6 @@ Add presets and additional features to enhance the plugin's capabilities.
 ### Stretch goals:
 Implement individual envelopes for Saturation Decay and Distortion Decay, if feasible.
 Implement a way of playing the bass synth 'in reverse'.
+
+
 
