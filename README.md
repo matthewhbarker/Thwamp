@@ -1,14 +1,17 @@
 # THWAMP
-## Bass Synth 
+## a Hip-Hop Bass Synth 
 
 ## PROJECT FINAL REPORT
 
-## Overview
+### How to Run: 
 
-For an overview, please refer to the overview written under 'PROJECT PROGRESS REPORT'.
-
-
-
+1. Create a JUCE project with the name 'Thwamp'
+2. make sure the JUCE project contains: 
+  - the dsp module 
+  - the 'is a synth' marked 'on'
+  - the 'input midi' marked 'on'
+3. replace the source code with the source code contained in this reposity. 
+4. You can build as either a standalone plugin, or a vst/au, and use the plugin.
 
 ### PROJECT PROGRESS REPORT
 
@@ -45,5 +48,11 @@ Add presets and additional features to enhance the plugin's capabilities.
 Implement individual envelopes for Saturation Decay and Distortion Decay, if feasible.
 Implement a way of playing the bass synth 'in reverse'.
 
+### Recources: 
 
-
+https://www.youtube.com/@TheAudioProgrammer - This channel helped me massivly. 
+https://www.youtube.com/@ValerioVelardoTheSoundofAI - This channel also helped me a lot.
+https://www.youtube.com/watch?v=pbKJrks1ByE 
+https://en.wikipedia.org/wiki/Triangle_wave
+https://www.dataq.com/data-acquisition/general-education-tutorials/fft-fast-fourier-transform-waveform-analysis.html
+https://www.loopcloud.com/cloud/blog/4849-Distorted-Reality-Your-guide-to-different-types-of-distortion
